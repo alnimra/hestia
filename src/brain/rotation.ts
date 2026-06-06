@@ -35,13 +35,22 @@ export function parentSafeProteinFor(cfg: Config, dateISO: string): ProteinCateg
 }
 
 /**
- * The protein this specific person eats on this date. Mom & dad (no pork/no beef)
- * are auto-swapped to the parent-safe protein on a pork/beef day. The dietary rule
- * is enforced here from `eatsPork`/`eatsBeef`, the single source of truth.
+ * Resolve which of {main, parentSafe} a person eats. Mom & dad (no pork/no beef)
+ * get the parent-safe protein when the main is red meat. The dietary rule is
+ * enforced here from `eatsPork`/`eatsBeef`, the single source of truth. Taking
+ * `main` as a param lets an owner override the day's protein and still honor diets.
  */
-export function proteinForPerson(cfg: Config, person: Person, dateISO: string): ProteinCategory {
-  const main = mainProteinFor(cfg, dateISO)
-  if (main === 'pork' && !person.eatsPork) return parentSafeProteinFor(cfg, dateISO)
-  if (main === 'beef' && !person.eatsBeef) return parentSafeProteinFor(cfg, dateISO)
+export function personProtein(
+  person: Person,
+  main: ProteinCategory,
+  parentSafe: ProteinCategory,
+): ProteinCategory {
+  if (main === 'pork' && !person.eatsPork) return parentSafe
+  if (main === 'beef' && !person.eatsBeef) return parentSafe
   return main
+}
+
+/** The protein this person eats on this date (auto rotation, no override). */
+export function proteinForPerson(cfg: Config, person: Person, dateISO: string): ProteinCategory {
+  return personProtein(person, mainProteinFor(cfg, dateISO), parentSafeProteinFor(cfg, dateISO))
 }

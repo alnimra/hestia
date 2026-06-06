@@ -1,7 +1,7 @@
 import type { Env } from './env'
-import type { Dish } from '../brain/types'
+import type { Dish, ProteinCategory } from '../brain/types'
 import { DEFAULT_CONFIG } from '../brain/config'
-import { computeDayPlan, type DayPlan, type DishLib, type PlanLists } from '../brain/plan'
+import { computeDayPlan, type DayPlan, type DishLib, type PlanLists, type PlanOptions } from '../brain/plan'
 
 type DishRow = {
   id: string
@@ -12,6 +12,15 @@ type DishRow = {
   parent_safe: number
   serve_style: Dish['serveStyle']
   needs_assembly: number
+}
+type DailyPlanRow = {
+  date: string
+  protein_id: string | null
+  parent_protein_id: string | null
+  juice_id: string | null
+  dessert_id: string | null
+  source: string
+  guest_count: number
 }
 
 const toDish = (r: DishRow): Dish => ({
@@ -27,13 +36,10 @@ const toDish = (r: DishRow): Dish => ({
 
 async function loadLists(db: D1Database): Promise<PlanLists> {
   const juices = await db.prepare('SELECT id FROM juices ORDER BY id').all<{ id: string }>()
-  const desserts = await db
-    .prepare("SELECT id FROM dishes WHERE type = 'dessert' ORDER BY id")
-    .all<{ id: string }>()
+  const desserts = await db.prepare("SELECT id FROM dishes WHERE type = 'dessert' ORDER BY id").all<{ id: string }>()
   const dishRows = await db
     .prepare("SELECT * FROM dishes WHERE parent_safe = 1 AND type IN ('main','side','carb') ORDER BY id")
     .all<DishRow>()
-
   const dishes: DishLib = {
     mains: dishRows.results.filter((r) => r.type === 'main').map(toDish),
     sides: dishRows.results.filter((r) => r.type === 'side').map(toDish),
@@ -42,24 +48,42 @@ async function loadLists(db: D1Database): Promise<PlanLists> {
   return { juices: juices.results.map((r) => r.id), desserts: desserts.results.map((r) => r.id), dishes }
 }
 
+async function loadOpts(db: D1Database, dateISO: string): Promise<{ opts: PlanOptions; header: DailyPlanRow | null }> {
+  const header = await db.prepare('SELECT * FROM daily_plans WHERE date = ?1').bind(dateISO).first<DailyPlanRow>()
+  const attRows = await db
+    .prepare('SELECT person_id, eating FROM plan_attendance WHERE date = ?1')
+    .bind(dateISO)
+    .all<{ person_id: string; eating: number }>()
+  const attendance: Record<string, boolean> = {}
+  for (const r of attRows.results) attendance[r.person_id] = !!r.eating
+  const opts: PlanOptions = { attendance, guestCount: header?.guest_count ?? 0 }
+  if (header?.source === 'override') {
+    opts.override = {
+      proteinId: (header.protein_id as ProteinCategory) ?? undefined,
+      parentProteinId: (header.parent_protein_id as ProteinCategory) ?? undefined,
+      juiceId: header.juice_id,
+      dessertId: header.dessert_id,
+    }
+  }
+  return { opts, header }
+}
+
 /**
- * The day's plan. Computed fresh from the brain over the loaded libraries (auto
- * rows are a cache, never a second source of truth — review P2-4). The header is
- * upserted so an owner override can pin it later; we only overwrite `source='auto'`
- * rows, never an override.
+ * The day's plan, reflecting any owner override + attendance. Auto rows are a cache
+ * (re-derived from the brain on read); an `override` row is pinned and respected.
  */
 export async function getOrCreatePlan(env: Env, dateISO: string): Promise<DayPlan> {
   const lists = await loadLists(env.DB)
-  const plan = computeDayPlan(DEFAULT_CONFIG, dateISO, lists)
+  const { opts } = await loadOpts(env.DB, dateISO)
+  const plan = computeDayPlan(DEFAULT_CONFIG, dateISO, lists, opts)
 
+  // cache the auto header; never clobber an override.
   await env.DB.prepare(
     `INSERT INTO daily_plans (date, protein_id, parent_protein_id, juice_id, dessert_id, source)
      VALUES (?1, ?2, ?3, ?4, ?5, 'auto')
      ON CONFLICT(date) DO UPDATE SET
-       protein_id = excluded.protein_id,
-       parent_protein_id = excluded.parent_protein_id,
-       juice_id = excluded.juice_id,
-       dessert_id = excluded.dessert_id
+       protein_id = excluded.protein_id, parent_protein_id = excluded.parent_protein_id,
+       juice_id = excluded.juice_id, dessert_id = excluded.dessert_id
      WHERE daily_plans.source = 'auto'`,
   )
     .bind(dateISO, plan.proteinId, plan.parentProteinId, plan.juiceId, plan.dessertId)
@@ -68,15 +92,78 @@ export async function getOrCreatePlan(env: Env, dateISO: string): Promise<DayPla
   return plan
 }
 
-/** id -> English name for every dish, juice, and protein (for helper labels). */
-export async function loadNames(db: D1Database): Promise<Record<string, string>> {
-  const dishes = await db.prepare('SELECT id, name_en FROM dishes').all<{ id: string; name_en: string }>()
-  const juices = await db.prepare('SELECT id, name_en FROM juices').all<{ id: string; name_en: string }>()
-  const names: Record<string, string> = {}
-  for (const r of dishes.results) names[r.id] = r.name_en
-  for (const r of juices.results) names[r.id] = r.name_en
+export interface OverridePatch {
+  proteinId?: ProteinCategory
+  juiceId?: string | null
+  dessertId?: string | null
+  guestCount?: number
+}
+
+/** Pin an override for the date (merging the patch over the current plan), then return it. */
+export async function setOverride(env: Env, dateISO: string, patch: OverridePatch): Promise<DayPlan> {
+  const current = await getOrCreatePlan(env, dateISO)
+  const proteinId = patch.proteinId ?? current.proteinId
+  const juiceId = patch.juiceId !== undefined ? patch.juiceId : current.juiceId
+  const dessertId = patch.dessertId !== undefined ? patch.dessertId : current.dessertId
+  const guestCount = patch.guestCount ?? current.guestCount
+  await env.DB.prepare(
+    `INSERT INTO daily_plans (date, protein_id, parent_protein_id, juice_id, dessert_id, source, guest_count)
+     VALUES (?1, ?2, ?3, ?4, ?5, 'override', ?6)
+     ON CONFLICT(date) DO UPDATE SET
+       protein_id = excluded.protein_id, parent_protein_id = excluded.parent_protein_id,
+       juice_id = excluded.juice_id, dessert_id = excluded.dessert_id,
+       source = 'override', guest_count = excluded.guest_count`,
+  )
+    .bind(dateISO, proteinId, current.parentProteinId, juiceId, dessertId, guestCount)
+    .run()
+  return getOrCreatePlan(env, dateISO)
+}
+
+export async function setAttendance(env: Env, dateISO: string, personId: string, eating: boolean): Promise<DayPlan> {
+  await env.DB.prepare(
+    `INSERT INTO plan_attendance (date, person_id, eating) VALUES (?1, ?2, ?3)
+     ON CONFLICT(date, person_id) DO UPDATE SET eating = excluded.eating`,
+  )
+    .bind(dateISO, personId, eating ? 1 : 0)
+    .run()
+  return getOrCreatePlan(env, dateISO)
+}
+
+/** Reset the day to autopilot (drop the override + attendance). */
+export async function resetDay(env: Env, dateISO: string): Promise<DayPlan> {
+  await env.DB.prepare('DELETE FROM daily_plans WHERE date = ?1').bind(dateISO).run()
+  await env.DB.prepare('DELETE FROM plan_attendance WHERE date = ?1').bind(dateISO).run()
+  return getOrCreatePlan(env, dateISO)
+}
+
+export async function addReceipt(env: Env, dateISO: string, amountVnd: number, note: string | null): Promise<void> {
+  await env.DB.prepare(
+    'INSERT INTO receipts (date, amount_vnd, note, created_at) VALUES (?1, ?2, ?3, ?4)',
+  )
+    .bind(dateISO, Math.round(amountVnd), note, new Date().toISOString())
+    .run()
+}
+
+export async function listReceipts(
+  db: D1Database,
+  dateISO: string,
+): Promise<{ total: number; items: { amountVnd: number; note: string | null; at: string }[] }> {
+  const rows = await db
+    .prepare('SELECT amount_vnd, note, created_at FROM receipts WHERE date = ?1 ORDER BY created_at')
+    .bind(dateISO)
+    .all<{ amount_vnd: number; note: string | null; created_at: string }>()
+  const items = rows.results.map((r) => ({ amountVnd: r.amount_vnd, note: r.note, at: r.created_at }))
+  return { total: items.reduce((s, x) => s + x.amountVnd, 0), items }
+}
+
+export async function loadNames(db: D1Database): Promise<Record<string, { en: string; vi: string }>> {
+  const dishes = await db.prepare('SELECT id, name_en, name_vi FROM dishes').all<{ id: string; name_en: string; name_vi: string }>()
+  const juices = await db.prepare('SELECT id, name_en, name_vi FROM juices').all<{ id: string; name_en: string; name_vi: string }>()
+  const names: Record<string, { en: string; vi: string }> = {}
+  for (const r of dishes.results) names[r.id] = { en: r.name_en, vi: r.name_vi }
+  for (const r of juices.results) names[r.id] = { en: r.name_en, vi: r.name_vi }
   for (const cat of Object.keys(DEFAULT_CONFIG.proteins) as (keyof typeof DEFAULT_CONFIG.proteins)[]) {
-    names[cat] = DEFAULT_CONFIG.proteins[cat].nameEn
+    names[cat] = { en: DEFAULT_CONFIG.proteins[cat].nameEn, vi: DEFAULT_CONFIG.proteins[cat].nameVi }
   }
   return names
 }
@@ -92,11 +179,6 @@ export async function getCompletedSteps(
   return rows.results.map((r) => ({ stepKey: r.step_key, completedAt: r.completed_at }))
 }
 
-/**
- * Record a check-off. Idempotent on client_event_id (the outbox can flush twice);
- * completed_at is the authoritative SERVER timestamp. Returns the (possibly
- * pre-existing) timestamp so a double-flush is a no-op.
- */
 export async function recordStep(
   db: D1Database,
   dateISO: string,

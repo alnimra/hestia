@@ -1,7 +1,11 @@
 import { Hono } from 'hono'
 import type { Env } from './env'
+import type { ProteinCategory } from '../brain/types'
 import { hcmcDateString } from '../brain/date'
-import { getOrCreatePlan, loadNames, getCompletedSteps, recordStep, undoStep } from './repo'
+import {
+  getOrCreatePlan, loadNames, getCompletedSteps, recordStep, undoStep,
+  setOverride, setAttendance, resetDay, addReceipt, listReceipts,
+} from './repo'
 
 const app = new Hono<{ Bindings: Env }>()
 
@@ -44,6 +48,49 @@ app.post('/api/tasks/undo', async (c) => {
   const date = body.date ?? hcmcDateString(new Date())
   if (!body.stepKey) return c.json({ error: 'stepKey required' }, 400)
   await undoStep(c.env.DB, date, body.stepKey)
+  return c.json({ ok: true })
+})
+
+// Owner dashboard — plan + names + completed steps + bill, in one call.
+app.get('/api/state', async (c) => {
+  const date = c.req.query('date') ?? hcmcDateString(new Date())
+  const [plan, names, completed, bill] = await Promise.all([
+    getOrCreatePlan(c.env, date),
+    loadNames(c.env.DB),
+    getCompletedSteps(c.env.DB, date),
+    listReceipts(c.env.DB, date),
+  ])
+  return c.json({ ...plan, names, completed, bill })
+})
+
+// Owner override / attendance / reset (Access-gated in prod via Cloudflare Access).
+app.post('/api/plan/override', async (c) => {
+  const b = await c.req.json<{ date?: string; proteinId?: ProteinCategory; juiceId?: string | null; dessertId?: string | null; guestCount?: number }>()
+  const date = b.date ?? hcmcDateString(new Date())
+  const plan = await setOverride(c.env, date, { proteinId: b.proteinId, juiceId: b.juiceId, dessertId: b.dessertId, guestCount: b.guestCount })
+  return c.json({ ...plan, names: await loadNames(c.env.DB) })
+})
+
+app.post('/api/attendance', async (c) => {
+  const b = await c.req.json<{ date?: string; personId?: string; eating?: boolean }>()
+  const date = b.date ?? hcmcDateString(new Date())
+  if (!b.personId) return c.json({ error: 'personId required' }, 400)
+  const plan = await setAttendance(c.env, date, b.personId, b.eating !== false)
+  return c.json({ ...plan, names: await loadNames(c.env.DB) })
+})
+
+app.post('/api/plan/reset', async (c) => {
+  const b = await c.req.json<{ date?: string }>()
+  const date = b.date ?? hcmcDateString(new Date())
+  const plan = await resetDay(c.env, date)
+  return c.json({ ...plan, names: await loadNames(c.env.DB) })
+})
+
+app.post('/api/receipts', async (c) => {
+  const b = await c.req.json<{ date?: string; amountVnd?: number; note?: string }>()
+  const date = b.date ?? hcmcDateString(new Date())
+  if (typeof b.amountVnd !== 'number') return c.json({ error: 'amountVnd required' }, 400)
+  await addReceipt(c.env, date, b.amountVnd, b.note ?? null)
   return c.json({ ok: true })
 })
 
