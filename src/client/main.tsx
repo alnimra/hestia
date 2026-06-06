@@ -11,3 +11,11 @@ createRoot(root).render(
     <App />
   </StrictMode>,
 )
+
+// Offline: the service worker caches the shell + last plan so the kitchen keeps
+// working through a wifi blip; the outbox queues check-offs.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    void navigator.serviceWorker.register('/sw.js').catch(() => {})
+  })
+}

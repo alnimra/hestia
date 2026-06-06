@@ -65,3 +65,38 @@ body {
 .s-time { font-size: 12px; color: var(--green); font-weight: 800; white-space: nowrap; margin-top: 4px; }
 
 .t-foot { text-align: center; font-size: 11.5px; color: var(--muted); margin: 16px 14px 0; }
+
+.lang { font-size: 11px; font-weight: 800; color: var(--ember-deep); background: var(--ember-soft); border: 1px solid #eccdbe; border-radius: 999px; padding: 3px 9px; margin-right: 8px; cursor: pointer; }
+
+/* owner dashboard */
+.dash { max-width: 520px; margin: 0 auto; padding: 0 0 40px; }
+.d-head { background: #1f1b18; color: #fff; padding: 16px; }
+.d-top { display: flex; align-items: center; justify-content: space-between; }
+.d-head .t-brand { color: #fff; }
+.d-head .t-date { background: #2c2622; color: #d8c9bd; }
+.d-prog { margin-top: 12px; }
+.d-prog b { font-size: 28px; font-weight: 900; }
+.d-prog span { color: #b9a89c; font-size: 13px; }
+.d-last { margin-top: 7px; font-size: 12px; color: #d8c9bd; background: #2c2622; border: 1px solid #3a322c; border-radius: 9px; padding: 7px 10px; }
+.panel { background: #fff; border: 1px solid var(--line); border-radius: 13px; margin: 12px 14px; padding: 13px; }
+.panel h4 { margin: 0 0 9px; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.panel h4 em { color: var(--ember-deep); font-style: normal; }
+.d-plan { font-size: 13px; }
+.d-people { margin-top: 10px; }
+.d-person { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid #f4ede5; font-size: 13px; }
+.dp-name { font-weight: 700; width: 70px; }
+.dp-meat { color: var(--muted); }
+.dp-flag { margin-left: auto; font-size: 10.5px; font-weight: 700; color: var(--green); background: var(--green-soft); border-radius: 6px; padding: 2px 7px; }
+.d-row { display: flex; align-items: center; gap: 10px; margin: 8px 0; font-size: 13.5px; font-weight: 600; }
+.d-row > span { width: 64px; }
+.d-row select, .d-row input { flex: 1; padding: 8px 10px; border: 1px solid var(--line2); border-radius: 9px; font: inherit; }
+.d-row button { padding: 8px 14px; border: 0; border-radius: 9px; background: var(--ink); color: #fff; font-weight: 700; cursor: pointer; }
+.d-att { display: flex; flex-wrap: wrap; gap: 7px; margin: 6px 0; }
+.tog { font-size: 13px; font-weight: 700; padding: 7px 11px; border-radius: 9px; border: 1px solid var(--line2); background: #fff; color: var(--muted); cursor: pointer; }
+.tog.on { background: var(--green-soft); color: var(--green); border-color: #cfe6da; }
+.d-reset { width: 100%; margin-top: 6px; padding: 9px; border: 1px solid var(--line2); background: #fff; border-radius: 10px; font-weight: 700; color: var(--muted); cursor: pointer; }
+.d-tl .d-ev { display: flex; gap: 10px; font-size: 12.5px; padding: 5px 0; }
+.d-tm { color: var(--muted); width: 48px; flex: 0 0 auto; font-weight: 700; }
+.d-bill { margin-bottom: 8px; }
+.d-bill b { font-size: 20px; font-weight: 900; }
+.d-bill span { color: var(--muted); font-size: 13px; }

@@ -1,0 +1,21 @@
+name: Apply D1 migrations (manual)
+
+# Schema migrations are irreversible on prod D1, so they run only when a human
+# triggers this workflow — never on an automatic deploy (eng review P1-7).
+on:
+  workflow_dispatch:
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          command: d1 migrations apply hestia --remote
