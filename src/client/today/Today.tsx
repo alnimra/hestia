@@ -8,8 +8,8 @@ type TodayPlan = DayPlan & { names: NameMap; pudding?: PuddingRecipe }
 type Completed = { stepKey: string; completedAt: string }
 
 const UI = {
-  en: { meat: 'Meat', parents: 'Bố & Mẹ', juice: 'Juice', dessert: 'Dessert', done: 'done', today: 'Today', loading: 'Loading…', foot: 'Tap a step for details · tap the circle when done · tap ✓ to undo', err: 'Could not load the plan.', assembleNote: 'If it comes as loose parts (delivery), YOU roll & plate it — don’t serve the parts.' },
-  vi: { meat: 'Đạm', parents: 'Bố & Mẹ', juice: 'Nước ép', dessert: 'Tráng miệng', done: 'xong', today: 'Hôm nay', loading: 'Đang tải…', foot: 'Bấm vào bước để xem chi tiết · bấm vòng tròn khi xong · bấm ✓ để hoàn tác', err: 'Không tải được kế hoạch.', assembleNote: 'Nếu giao rời từng phần, BẠN tự cuốn/ráp và bày ra dĩa — đừng dọn phần rời.' },
+  en: { parents: 'Parents', juice: 'Juice', dessert: 'Dessert', done: 'done', today: 'Today', nextUp: 'Now', allDone: 'All done for today', loading: 'Loading…', foot: 'Tap a step for details · tap the circle when done · tap ✓ to undo', err: 'Could not load the plan.', assembleNote: 'If it comes as loose parts (delivery), YOU roll & plate it — don’t serve the parts.' },
+  vi: { parents: 'Bố & Mẹ', juice: 'Nước ép', dessert: 'Tráng miệng', done: 'xong', today: 'Hôm nay', nextUp: 'Bây giờ', allDone: 'Hôm nay đã xong', loading: 'Đang tải…', foot: 'Bấm vào bước để xem chi tiết · bấm vòng tròn khi xong · bấm ✓ để hoàn tác', err: 'Không tải được kế hoạch.', assembleNote: 'Nếu giao rời từng phần, BẠN tự cuốn/ráp và bày ra dĩa — đừng dọn phần rời.' },
 }
 
 const SERVE: Record<ServeStyle, { en: string; vi: string }> = {
@@ -25,6 +25,10 @@ const addDays = (iso: string, n: number): string => {
   d.setUTCDate(d.getUTCDate() + n)
   return d.toISOString().slice(0, 10)
 }
+const prettyDate = (iso: string, lang: Lang): string =>
+  new Date(iso + 'T00:00:00Z').toLocaleDateString(lang === 'vi' ? 'vi-VN' : 'en-GB', {
+    weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC',
+  })
 
 export function Today() {
   const [plan, setPlan] = useState<TodayPlan | null>(null)
@@ -95,6 +99,9 @@ export function Today() {
   const doneCount = blocks.flatMap((b) => b.steps).filter((s) => done[s.key]).length
   const fmt = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   const hasDetail = (s: Step) => !!(s.recipe || s.weigh || s.dishes || s.detail)
+  const isToday = !!today && plan.date === today
+  const flat = blocks.flatMap((b) => b.steps.map((s) => ({ s, time: b.time, title: b.title })))
+  const next = flat.find((x) => !done[x.s.key])
 
   const renderDetail = (s: Step) => (
     <div className="detail">
@@ -148,15 +155,28 @@ export function Today() {
         </div>
         <div className="t-nav">
           <button className="nav" onClick={() => go(-1)} aria-label="previous day">‹</button>
-          <span className="t-date">{plan.date}{today && plan.date !== today ? '' : ` · ${t.today}`}</span>
+          <span className={`t-date${isToday ? ' is-today' : ''}`}>{prettyDate(plan.date, lang)}{isToday ? ` · ${t.today}` : ''}</span>
           <button className="nav" onClick={() => go(1)} aria-label="next day">›</button>
         </div>
         <div className="t-plan">
-          {t.meat}: <b>{nm(plan.proteinId)}</b> · {t.parents}: <b>{nm(plan.parentProteinId)}</b> · {t.juice}: {nm(plan.juiceId)} · {t.dessert}: {nm(plan.dessertId)}
+          <span className="pc pc-meat">🍖 {nm(plan.proteinId)}</span>
+          {plan.parentProteinId !== plan.proteinId && <span className="pc pc-par">{t.parents}: {nm(plan.parentProteinId)}</span>}
+          <span className="pc">🥤 {nm(plan.juiceId)}</span>
+          <span className="pc">🍮 {nm(plan.dessertId)}</span>
         </div>
         <div className="t-prog"><i style={{ width: `${total ? (doneCount / total) * 100 : 0}%` }} /></div>
         <div className="t-prog-lab"><span>{doneCount} / {total} {t.done}</span></div>
       </header>
+
+      {isToday && (next ? (
+        <button className="t-next" onClick={() => setOpenKeys((k) => new Set(k).add(next.s.key))}>
+          <span className="n-lab">{t.nextUp}</span>
+          <span className="n-step">{next.s.label}</span>
+          <span className="n-time">{next.time}</span>
+        </button>
+      ) : (
+        <div className="t-next is-done">✓ {t.allDone}</div>
+      ))}
 
       {blocks.map((block) => {
         const allDone = block.steps.every((s) => done[s.key])
@@ -175,7 +195,7 @@ export function Today() {
                 <div key={s.key} className={`step${at ? ' s-done' : ''}`}>
                   <div className="s-row">
                     <button className={`cb${at ? ' on' : ''}`} onClick={() => (at ? undo(s.key) : tap(s.key))} aria-label={at ? 'undo' : 'done'}>
-                      {at ? '✓' : ''}
+                      <span className="cb-box">{at ? '✓' : ''}</span>
                     </button>
                     <button className="s-body" onClick={() => expandable && toggleOpen(s.key)}>
                       <span className="s-label">{s.label}</span>
