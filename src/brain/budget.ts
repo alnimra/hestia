@@ -9,6 +9,9 @@ export interface PersonBudget {
   meatProteinG: number
   meatGramsPerDay: number
   meatGramsPerMeal: number
+  servedMeatProteinG: number
+  totalProteinG: number
+  targetGapG: number
   wouldExceed: boolean
 }
 
@@ -21,11 +24,11 @@ export function puddingProteinG(cfg: Config, person: Person): number {
  * the total lands ON target and never over.
  *   meat = max(0, target - pudding - dishes - safetyMargin)
  *
- * `protein` is the cooked meat this person actually gets (the parent-safe swap is
+ * `protein` is the cooked cut this person actually gets (the parent-safe swap is
  * resolved by the caller). Cooked grams are computed for the whole day and floored;
- * the day is split into two EQUAL meals via floor(perDay/2), so two meals never
- * exceed the daily budget (split-independent). If pudding + dishes already meet
- * target, meat is 0 and `wouldExceed` is set (we clamp, we do not reduce dishes).
+ * the served day is two EQUAL meals via floor(perDay/2), so the served meat can
+ * never exceed the daily budget. If pudding + dishes already meet target, meat is
+ * 0 and `wouldExceed` is set (we clamp, we do not reduce dishes).
  */
 export function computeBudget(
   cfg: Config,
@@ -41,6 +44,9 @@ export function computeBudget(
   const density = cfg.proteins[protein].proteinPer100gCooked
   const meatGramsPerDay = Math.floor((meatProteinG * 100) / density)
   const meatGramsPerMeal = Math.floor(meatGramsPerDay / 2)
+  const servedMeatProteinG = (meatGramsPerMeal * 2 * density) / 100
+  const totalProteinG = puddingG + dishesG + servedMeatProteinG
+  const targetGapG = person.targetG - totalProteinG
 
   return {
     personId: person.id,
@@ -51,6 +57,9 @@ export function computeBudget(
     meatProteinG,
     meatGramsPerDay,
     meatGramsPerMeal,
+    servedMeatProteinG,
+    totalProteinG,
+    targetGapG,
     wouldExceed,
   }
 }

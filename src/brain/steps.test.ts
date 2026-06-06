@@ -11,8 +11,16 @@ const plan: DayPlan = {
     { meal: 'dinner', dishIds: ['ca_thu_kho', 'canh_bi_do', 'com_trang'] },
   ],
   people: [
-    { personId: 'milan', name: 'Milan', targetG: 140, protein: 'pork', meatGramsPerMeal: 70, meatGramsPerDay: 140, wouldExceed: false },
-    { personId: 'mom', name: 'Mẹ', targetG: 70, protein: 'chicken', meatGramsPerMeal: 0, meatGramsPerDay: 0, wouldExceed: true },
+    {
+      personId: 'milan', name: 'Milan', targetG: 140, protein: 'pork',
+      meatGramsPerMeal: 70, meatGramsPerDay: 140, puddingG: 36, dishesG: 40,
+      servedMeatProteinG: 36.638, totalProteinG: 112.638, targetGapG: 27.362, wouldExceed: false,
+    },
+    {
+      personId: 'mom', name: 'Mẹ', targetG: 70, protein: 'chicken',
+      meatGramsPerMeal: 0, meatGramsPerDay: 0, puddingG: 22, dishesG: 40,
+      servedMeatProteinG: 0, totalProteinG: 62, targetGapG: 8, wouldExceed: true,
+    },
   ],
   roster: [
     { id: 'milan', name: 'Milan', eating: true },
@@ -68,6 +76,13 @@ describe('stepsForDay', () => {
     const p = find('breakfast', 'make_pudding')
     expect(p.recipe?.ingredients.length).toBeGreaterThan(0)
     expect(p.recipe?.scoops.find((s) => s.name === 'Milan')?.scoops).toBe(1)
+  })
+
+  it('puts finished Nutty Pudding in the fridge so breakfast is just ready', () => {
+    const chill = find('breakfast', 'chill_pudding')
+    expect(chill.label).toBe('Put Nutty Pudding in the fridge')
+    expect(chill.detail).toContain('whenever')
+    expect(blocks.find((b) => b.key === 'breakfast')!.serveAt).toContain('fridge')
   })
 
   it('translates to Vietnamese (labels, dish + protein names) with stable keys', () => {

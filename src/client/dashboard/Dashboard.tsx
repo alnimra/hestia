@@ -51,6 +51,7 @@ export function Dashboard() {
   const stepLabel: Record<string, string> = {}
   for (const b of blocks) for (const st of b.steps) stepLabel[st.key] = st.label
   const fmt = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const grams = (n: number) => `${Math.round(n)}g`
   const vnd = (n: number) => '₫' + n.toLocaleString()
   const last = s.completed.length ? s.completed[s.completed.length - 1] : null
 
@@ -69,7 +70,8 @@ export function Dashboard() {
           {s.people.map((p) => (
             <div className="d-person" key={p.personId}>
               <span className="dp-name">{p.name}</span>
-              <span className="dp-meat">{nm(p.protein)} · {p.meatGramsPerMeal}g/meal</span>
+              <span className="dp-meat">{nm(p.protein)} · {p.meatGramsPerMeal} cooked g/meal</span>
+              <span className="dp-total">{grams(p.totalProteinG)} / {p.targetG}g</span>
               {p.wouldExceed && <span className="dp-flag">dishes cover it</span>}
             </div>
           ))}

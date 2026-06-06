@@ -12,10 +12,58 @@ export const DEFAULT_CONFIG: Config = {
   parentSafeRotation: ['chicken', 'fish'],
 
   proteins: {
-    chicken: { id: 'chicken', nameEn: 'Chicken', nameVi: 'Gà', proteinPer100gCooked: 31 },
-    fish: { id: 'fish', nameEn: 'Fish', nameVi: 'Cá', proteinPer100gCooked: 22 },
-    pork: { id: 'pork', nameEn: 'Pork', nameVi: 'Heo', proteinPer100gCooked: 27 },
-    beef: { id: 'beef', nameEn: 'Beef', nameVi: 'Bò', proteinPer100gCooked: 26 },
+    chicken: {
+      id: 'chicken',
+      nameEn: 'Chicken breast',
+      nameVi: 'Ức gà',
+      cutEn: 'Chicken breast, meat only, cooked',
+      cutVi: 'Ức gà, chỉ thịt, đã nấu chín',
+      proteinPer100gCooked: 31.02,
+      source: {
+        name: 'USDA FoodData Central',
+        fdcId: 171477,
+        description: 'Chicken, broilers or fryers, breast, meat only, cooked, roasted',
+      },
+    },
+    fish: {
+      id: 'fish',
+      nameEn: 'Tilapia fillet',
+      nameVi: 'Phi lê cá rô phi',
+      cutEn: 'Tilapia fillet, cooked',
+      cutVi: 'Phi lê cá rô phi đã nấu chín',
+      proteinPer100gCooked: 26.15,
+      source: {
+        name: 'USDA FoodData Central',
+        fdcId: 175177,
+        description: 'Fish, tilapia, cooked, dry heat',
+      },
+    },
+    pork: {
+      id: 'pork',
+      nameEn: 'Pork tenderloin',
+      nameVi: 'Thăn heo',
+      cutEn: 'Pork tenderloin, lean only, cooked',
+      cutVi: 'Thăn heo nạc đã nấu chín',
+      proteinPer100gCooked: 26.17,
+      source: {
+        name: 'USDA FoodData Central',
+        fdcId: 168250,
+        description: 'Pork, fresh, loin, tenderloin, separable lean only, cooked, roasted',
+      },
+    },
+    beef: {
+      id: 'beef',
+      nameEn: 'Beef top round steak',
+      nameVi: 'Bò đùi trên',
+      cutEn: 'Beef top round steak, lean only, cooked',
+      cutVi: 'Bò đùi trên nạc đã nấu chín',
+      proteinPer100gCooked: 31.82,
+      source: {
+        name: 'USDA FoodData Central',
+        fdcId: 171815,
+        description: 'Beef, round, top round, steak, separable lean only, trimmed to 1/8" fat, all grades, cooked, broiled',
+      },
+    },
   },
 
   people: [
@@ -26,5 +74,5 @@ export const DEFAULT_CONFIG: Config = {
   ],
 
   puddingBaseProteinG: 8,
-  nakproScoopProteinG: 28, // NAKPRO Pea Protein Isolate, ~28g / 36g scoop (unflavoured)
+  nakproScoopProteinG: 28, // NAKPRO Pea Protein Isolate, 28g / 36g scoop (unflavoured)
 }

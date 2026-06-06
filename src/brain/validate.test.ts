@@ -26,4 +26,26 @@ describe('validateConfig', () => {
     }
     expect(() => validateConfig(bad)).toThrow()
   })
+
+  it('rejects protein entries without a specific cooked cut', () => {
+    const bad = {
+      ...DEFAULT_CONFIG,
+      proteins: {
+        ...DEFAULT_CONFIG.proteins,
+        fish: { ...DEFAULT_CONFIG.proteins.fish, cutEn: '' },
+      },
+    }
+    expect(() => validateConfig(bad)).toThrow(/specific cooked cut/)
+  })
+
+  it('rejects protein entries without a USDA source id', () => {
+    const bad = {
+      ...DEFAULT_CONFIG,
+      proteins: {
+        ...DEFAULT_CONFIG.proteins,
+        fish: { ...DEFAULT_CONFIG.proteins.fish, source: { ...DEFAULT_CONFIG.proteins.fish.source, fdcId: 0 } },
+      },
+    }
+    expect(() => validateConfig(bad)).toThrow(/FoodData Central/)
+  })
 })

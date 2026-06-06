@@ -8,8 +8,16 @@ export interface Protein {
   id: ProteinCategory
   nameEn: string
   nameVi: string
+  /** specific cooked meat/cut used for weighing and protein math. */
+  cutEn: string
+  cutVi: string
   /** grams of protein per 100g COOKED. */
   proteinPer100gCooked: number
+  source: {
+    name: 'USDA FoodData Central'
+    fdcId: number
+    description: string
+  }
 }
 
 export interface Person {

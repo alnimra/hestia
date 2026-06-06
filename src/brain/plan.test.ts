@@ -22,13 +22,28 @@ const lists: PlanLists = {
   desserts: ['du_du', 'che_dau_xanh', 'banh_flan'],
   dishes: {
     mains: [
-      mkDish('pho', 'main', 25, true), // one-bowl, served alone
-      mkDish('fish', 'main', 22),
-      mkDish('chk', 'main', 24),
-      mkDish('squid', 'main', 18),
+      mkDish('pho', 'main', 20, true), // one-bowl, served alone
+      mkDish('fish', 'main', 16),
+      mkDish('chk', 'main', 16),
+      mkDish('squid', 'main', 13),
     ],
-    sides: [mkDish('greens', 'side', 3), mkDish('soup', 'side', 4)],
-    carbs: [mkDish('rice', 'carb', 4), mkDish('noodle', 'carb', 6), mkDish('banh_mi', 'carb', 8)],
+    sides: [mkDish('greens', 'side', 2), mkDish('soup', 'side', 2)],
+    carbs: [mkDish('rice', 'carb', 3), mkDish('noodle', 'carb', 3), mkDish('banh_mi', 'carb', 3)],
+  },
+}
+
+const tightProteinLists: PlanLists = {
+  juices: ['pennywort'],
+  desserts: ['du_du'],
+  dishes: {
+    mains: [
+      mkDish('high_a', 'main', 40, true),
+      mkDish('high_b', 'main', 40, true),
+      mkDish('low_a', 'main', 12, true),
+      mkDish('low_b', 'main', 14, true),
+    ],
+    sides: [],
+    carbs: [],
   },
 }
 
@@ -101,5 +116,23 @@ describe('computeDayPlan', () => {
       expect(person.meatGramsPerMeal).toBeGreaterThanOrEqual(0)
       expect(2 * person.meatGramsPerMeal).toBeLessThanOrEqual(person.meatGramsPerDay)
     }
+  })
+
+  it('exposes deterministic protein totals that stay within each active person target', () => {
+    for (let i = 0; i < 12; i++) {
+      const p = computeDayPlan(DEFAULT_CONFIG, day(i), lists)
+      for (const person of p.people) {
+        expect(person.totalProteinG).toBeCloseTo(person.puddingG + person.dishesG + person.servedMeatProteinG, 6)
+        expect(person.totalProteinG).toBeLessThanOrEqual(person.targetG)
+        expect(person.targetGapG).toBeCloseTo(person.targetG - person.totalProteinG, 6)
+      }
+    }
+  })
+
+  it('reroutes to a lower-protein dish pair before the lowest active target would be exceeded', () => {
+    const p = computeDayPlan(DEFAULT_CONFIG, day(0), tightProteinLists)
+    expect(p.meals.flatMap((m) => m.dishIds)).toEqual(['low_a', 'low_b'])
+    expect(p.dishesProteinPerDayG).toBe(26)
+    for (const person of p.people) expect(person.totalProteinG).toBeLessThanOrEqual(person.targetG)
   })
 })

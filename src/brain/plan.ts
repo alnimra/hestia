@@ -1,7 +1,7 @@
 import type { Config, Dish, ProteinCategory } from './types'
 import { daysSince } from './date'
 import { mainProteinFor, parentSafeProteinFor, personProtein } from './rotation'
-import { computeBudget } from './budget'
+import { computeBudget, puddingProteinG } from './budget'
 
 const wrap = (n: number, len: number): number => ((n % len) + len) % len
 
@@ -45,6 +45,11 @@ export interface PersonDay {
   protein: ProteinCategory
   meatGramsPerMeal: number
   meatGramsPerDay: number
+  puddingG: number
+  dishesG: number
+  servedMeatProteinG: number
+  totalProteinG: number
+  targetGapG: number
   wouldExceed: boolean
 }
 
@@ -86,35 +91,53 @@ export function computeDayPlan(
   const parentProteinId = isRedMain ? parentSwap : proteinId
   const juiceId = ov.juiceId !== undefined ? ov.juiceId : (pick(lists.juices, d) ?? null)
   const dessertId = ov.dessertId !== undefined ? ov.dessertId : (pick(lists.desserts, d) ?? null)
+  const attendance = opts.attendance ?? {}
+  const eating = cfg.people.filter((p) => attendance[p.id] !== false)
+  const dishProteinCapG = eating.length
+    ? Math.min(...eating.map((person) => Math.max(0, person.targetG - puddingProteinG(cfg, person))))
+    : Infinity
 
   const { mains, sides, carbs } = lists.dishes
   // A meal is either a complete one-bowl dish (pho, bún — served alone) or a
   // protein main + veg side + carb. Sides AND carbs rotate with the day; the old
   // code pinned the carb to index 0, which (with ORDER BY id) meant banh mi every
-  // single meal. Lunch and dinner pull from points ~half the menu apart (an odd
-  // offset) so they differ in dish and style, and nothing repeats across the
-  // lunch->dinner->next-lunch boundary.
+  // single meal. Lunch and dinner start ~half the menu apart, then deterministically
+  // shift to the nearest lower-protein pair if the default pair would push the
+  // lowest active eater over target before any meat top-up.
   const buildMeal = (i: number): Dish[] => {
     const main = pick(mains, i)
     if (!main) return []
     if (main.standalone) return [main]
     return [main, pick(sides, i), pick(carbs, i)].filter((x): x is Dish => !!x)
   }
+  const dishProtein = (dishes: Dish[]): number => dishes.reduce((sum, dish) => sum + dish.proteinPerServingG, 0)
   const offset = mains.length >= 4 ? (Math.floor(mains.length / 2) | 1) : 1
-  const lunchDishes = buildMeal(d)
-  const dinnerDishes = buildMeal(d + offset)
-  const dishesProteinPerDayG = [...lunchDishes, ...dinnerDishes].reduce(
-    (sum, dish) => sum + dish.proteinPerServingG,
-    0,
-  )
+  const chooseMeals = (): [Dish[], Dish[]] => {
+    if (mains.length <= 1) return [buildMeal(d), buildMeal(d + offset)]
+
+    let best: { lunch: Dish[]; dinner: Dish[]; score: number } | null = null
+    for (let lunchShift = 0; lunchShift < mains.length; lunchShift++) {
+      const lunch = buildMeal(d + lunchShift)
+      for (let dinnerShift = 0; dinnerShift < mains.length; dinnerShift++) {
+        const dinner = buildMeal(d + offset + dinnerShift)
+        if (lunch[0]?.id && lunch[0].id === dinner[0]?.id) continue
+
+        const total = dishProtein(lunch) + dishProtein(dinner)
+        const overBy = Number.isFinite(dishProteinCapG) ? Math.max(0, total - dishProteinCapG) : 0
+        const score = overBy * 1_000_000 + lunchShift * 1_000 + dinnerShift * 10 - total / 1_000
+        if (!best || score < best.score) best = { lunch, dinner, score }
+      }
+    }
+    return best ? [best.lunch, best.dinner] : [buildMeal(d), buildMeal(d + offset)]
+  }
+  const [lunchDishes, dinnerDishes] = chooseMeals()
+  const dishesProteinPerDayG = dishProtein(lunchDishes) + dishProtein(dinnerDishes)
 
   const meals: MealPlan[] = [
     { meal: 'lunch', dishIds: lunchDishes.map((x) => x.id) },
     { meal: 'dinner', dishIds: dinnerDishes.map((x) => x.id) },
   ]
 
-  const attendance = opts.attendance ?? {}
-  const eating = cfg.people.filter((p) => attendance[p.id] !== false)
   const people: PersonDay[] = eating.map((person) => {
     const protein = personProtein(person, proteinId, parentProteinId)
     const b = computeBudget(cfg, person, protein, dishesProteinPerDayG)
@@ -125,6 +148,11 @@ export function computeDayPlan(
       protein,
       meatGramsPerMeal: b.meatGramsPerMeal,
       meatGramsPerDay: b.meatGramsPerDay,
+      puddingG: b.puddingG,
+      dishesG: b.dishesG,
+      servedMeatProteinG: b.servedMeatProteinG,
+      totalProteinG: b.totalProteinG,
+      targetGapG: b.targetGapG,
       wouldExceed: b.wouldExceed,
     }
   })

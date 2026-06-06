@@ -96,4 +96,4 @@ INSERT OR REPLACE INTO juices (id,name_en,name_vi) VALUES
 INSERT OR REPLACE INTO recipes (key,name_en,name_vi,ingredients,steps_en) VALUES
  ('nutty_pudding','Nutty Pudding','Cháo hạt dinh dưỡng',
   '[{"en":"Ground macadamia (soaked)","qty":"3 Tbsp"},{"en":"Ground walnuts (soaked)","qty":"2 tsp"},{"en":"Chia seeds (soaked)","qty":"2 Tbsp"},{"en":"Ground flaxseed","qty":"1 tsp"},{"en":"Brazil nut","qty":"1/4"},{"en":"Cocoa","qty":"1 Tbsp"},{"en":"Sunflower lecithin","qty":"1 tsp"},{"en":"Ceylon cinnamon","qty":"1/2 tsp"},{"en":"Nut milk","qty":"50-100 ml"},{"en":"Pomegranate juice","qty":"60 ml"},{"en":"Mixed berries","qty":"75 g"},{"en":"Cherries","qty":"3"},{"en":"NAKPRO pea protein","qty":"per person scoops"}]',
-  'Drain last night''s soaked nuts + chia. Add all ingredients to a blender with each person''s NAKPRO scoops (Milan 1.0, brother 1.5, dad 1.0, mom 0.5). Blend ~2 min until foamy.');
+  'Drain last night''s soaked nuts + chia. Add all ingredients to a blender with each person''s NAKPRO scoops (Milan 1.0, brother 1.5, dad 1.0, mom 0.5). Blend ~2 min until foamy. Put the finished pudding in the fridge; people can eat it whenever after it is ready.');
