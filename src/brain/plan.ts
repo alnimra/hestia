@@ -88,8 +88,21 @@ export function computeDayPlan(
   const dessertId = ov.dessertId !== undefined ? ov.dessertId : (pick(lists.desserts, d) ?? null)
 
   const { mains, sides, carbs } = lists.dishes
-  const lunchDishes = [pick(mains, d), pick(sides, d), pick(carbs, 0)].filter((x): x is Dish => !!x)
-  const dinnerDishes = [pick(mains, d + 1), pick(sides, d + 1), pick(carbs, 0)].filter((x): x is Dish => !!x)
+  // A meal is either a complete one-bowl dish (pho, bún — served alone) or a
+  // protein main + veg side + carb. Sides AND carbs rotate with the day; the old
+  // code pinned the carb to index 0, which (with ORDER BY id) meant banh mi every
+  // single meal. Lunch and dinner pull from points ~half the menu apart (an odd
+  // offset) so they differ in dish and style, and nothing repeats across the
+  // lunch->dinner->next-lunch boundary.
+  const buildMeal = (i: number): Dish[] => {
+    const main = pick(mains, i)
+    if (!main) return []
+    if (main.standalone) return [main]
+    return [main, pick(sides, i), pick(carbs, i)].filter((x): x is Dish => !!x)
+  }
+  const offset = mains.length >= 4 ? (Math.floor(mains.length / 2) | 1) : 1
+  const lunchDishes = buildMeal(d)
+  const dinnerDishes = buildMeal(d + offset)
   const dishesProteinPerDayG = [...lunchDishes, ...dinnerDishes].reduce(
     (sum, dish) => sum + dish.proteinPerServingG,
     0,

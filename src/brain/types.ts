@@ -53,4 +53,6 @@ export interface Dish {
   parentSafe: boolean
   serveStyle: ServeStyle
   needsAssembly: boolean
+  /** A complete one-bowl meal (pho, bún, cơm gà) — served alone, no rice/side tacked on. */
+  standalone: boolean
 }

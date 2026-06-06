@@ -13,6 +13,8 @@ type DishRow = {
   parent_safe: number
   serve_style: Dish['serveStyle']
   needs_assembly: number
+  standalone: number
+  sort_order: number
 }
 type DailyPlanRow = {
   date: string
@@ -33,13 +35,14 @@ const toDish = (r: DishRow): Dish => ({
   parentSafe: !!r.parent_safe,
   serveStyle: r.serve_style,
   needsAssembly: !!r.needs_assembly,
+  standalone: !!r.standalone,
 })
 
 async function loadLists(db: D1Database): Promise<PlanLists> {
   const juices = await db.prepare('SELECT id FROM juices ORDER BY id').all<{ id: string }>()
   const desserts = await db.prepare("SELECT id FROM dishes WHERE type = 'dessert' ORDER BY id").all<{ id: string }>()
   const dishRows = await db
-    .prepare("SELECT * FROM dishes WHERE parent_safe = 1 AND type IN ('main','side','carb') ORDER BY id")
+    .prepare("SELECT * FROM dishes WHERE parent_safe = 1 AND type IN ('main','side','carb') ORDER BY sort_order, id")
     .all<DishRow>()
   const dishes: DishLib = {
     mains: dishRows.results.filter((r) => r.type === 'main').map(toDish),
