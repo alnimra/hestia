@@ -1,16 +1,29 @@
 import type { DayPlan } from './plan'
 
-// The housekeeper's day as ordered meal blocks of tappable steps. Pure: derived
-// from the plan + an id->{en,vi} name map + a language. Step keys are stable
-// (used in task_log); only the labels change with language.
+// The housekeeper's day as ordered meal blocks of tappable steps. Each step can
+// carry STRUCTURED detail (a weigh table, the day's dishes + how to serve each, the
+// pudding recipe, a dietary warning) that the UI expands on tap. Pure: derived from
+// the plan + the loaded names/serve-styles + an optional pudding recipe + language.
 
 export type Lang = 'en' | 'vi'
-export type NameMap = Record<string, { en: string; vi: string }>
+export type ServeStyle = 'assemble' | 'reheat' | 'plate_garnish' | 'cook_fresh' | 'serve_chilled'
+export type NameMap = Record<string, { en: string; vi: string; serveStyle?: ServeStyle; needsAssembly?: boolean }>
+
+export interface WeighRow { name: string; grams: number; protein: string }
+export interface DishItem { id: string; name: string; serveStyle?: ServeStyle; needsAssembly?: boolean }
+export interface PuddingRecipe {
+  ingredients: { label: string; qty: string }[]
+  scoops: { name: string; scoops: number }[]
+}
 
 export interface Step {
   key: string
   label: string
   detail?: string
+  weigh?: WeighRow[]
+  warn?: string
+  dishes?: DishItem[]
+  recipe?: PuddingRecipe
 }
 export interface StepBlock {
   key: string
@@ -22,22 +35,22 @@ export interface StepBlock {
 
 const T = {
   en: {
-    breakfast: 'Breakfast', serveByBreakfast: 'serve by 7:30 AM',
-    makePudding: 'Make Nutty Pudding',
-    puddingDetail: 'Drain last night’s soaked nuts + chia; blend with NAKPRO scoops (Milan 1.0 · Em trai 1.5 · Bố 1.0 · Mẹ 0.5)',
+    breakfast: 'Breakfast', serveByBreakfast: 'serve by 9:30 AM',
+    makePudding: 'Make Nutty Pudding', puddingHint: 'Tap for the recipe + scoops',
     makeJuice: 'Make today’s juice', setBreakfast: 'Set the breakfast table', serveBreakfast: 'Serve breakfast',
     lunchPrep: 'Lunch prep', buyLunch: 'Cook or buy today’s lunch dishes', cookLunchMeat: 'Cook lunch meat', perPerson: 'per person',
-    lunch: 'Lunch', serveAtLunch: 'serve at 12:00 PM', plate: 'Plate each person — their dishes + their meat',
+    lunch: 'Lunch', serveAtLunch: 'serve at 12:00 PM', plate: 'Plate each person — dishes + their meat',
     setTable: 'Set the table (chopsticks, fish sauce, water, glasses)', serveLunch: 'Serve lunch', dessert: 'Dessert / fruit',
     dinnerPrep: 'Dinner prep', buyDinner: 'Cook or buy today’s dinner dishes', cookDinnerMeat: 'Cook dinner meat — same amounts',
     dinner: 'Dinner', serveAtDinner: 'serve at 6:30 PM', plateDinner: 'Plate each person', setDinner: 'Set the table', serveDinner: 'Serve dinner',
     endOfDay: 'End of day', enterBill: 'Enter the day’s bill (cooked + bought)',
     night: 'Before bed — for tomorrow', soak: 'Soak tomorrow’s nuts + chia (cover with water, leave overnight)',
+    noPork: 'Bố & Mẹ do NOT eat pork/beef — cook',
+    ingredients: 'Ingredients (per person)', scoops: 'NAKPRO scoops (per person)',
   },
   vi: {
-    breakfast: 'Bữa sáng', serveByBreakfast: 'dọn trước 7:30',
-    makePudding: 'Làm Nutty Pudding',
-    puddingDetail: 'Để ráo hạt + chia đã ngâm tối qua; xay với NAKPRO (Milan 1.0 · Em trai 1.5 · Bố 1.0 · Mẹ 0.5)',
+    breakfast: 'Bữa sáng', serveByBreakfast: 'dọn trước 9:30',
+    makePudding: 'Làm Nutty Pudding', puddingHint: 'Bấm để xem công thức + số muỗng',
     makeJuice: 'Làm nước ép hôm nay', setBreakfast: 'Dọn bàn ăn sáng', serveBreakfast: 'Dọn bữa sáng ra bàn',
     lunchPrep: 'Chuẩn bị bữa trưa', buyLunch: 'Nấu hoặc mua món trưa hôm nay', cookLunchMeat: 'Nấu món đạm bữa trưa', perPerson: 'cho từng người',
     lunch: 'Bữa trưa', serveAtLunch: 'dọn lúc 12:00', plate: 'Bày món cho từng người — món ăn + phần đạm',
@@ -46,22 +59,28 @@ const T = {
     dinner: 'Bữa tối', serveAtDinner: 'dọn lúc 18:30', plateDinner: 'Bày món cho từng người', setDinner: 'Dọn bàn', serveDinner: 'Dọn bữa tối ra bàn',
     endOfDay: 'Cuối ngày', enterBill: 'Nhập tiền chợ hôm nay (nấu + mua)',
     night: 'Trước khi ngủ — cho ngày mai', soak: 'Ngâm hạt + chia cho ngày mai (đổ nước ngập, để qua đêm)',
+    noPork: 'Bố & Mẹ KHÔNG ăn heo/bò — nấu',
+    ingredients: 'Nguyên liệu (mỗi người)', scoops: 'Số muỗng NAKPRO (mỗi người)',
   },
 } as const
 
-export function stepsForDay(plan: DayPlan, names: NameMap, lang: Lang = 'en'): StepBlock[] {
+export function stepsForDay(plan: DayPlan, names: NameMap, lang: Lang = 'en', pudding?: PuddingRecipe): StepBlock[] {
   const t = T[lang]
   const nm = (id: string | null): string => (id ? (names[id]?.[lang] ?? names[id]?.en ?? id) : '—')
-  const dishList = (ids: string[]): string => ids.map(nm).join(' · ')
-  const weigh = plan.people.map((p) => `${p.name}: ${p.meatGramsPerMeal}g ${nm(p.protein)}`).join('  ·  ')
+  const dishItems = (ids: string[]): DishItem[] =>
+    ids.map((id) => ({ id, name: nm(id), serveStyle: names[id]?.serveStyle, needsAssembly: names[id]?.needsAssembly }))
+
+  const weigh: WeighRow[] = plan.people.map((p) => ({ name: p.name, grams: p.meatGramsPerMeal, protein: nm(p.protein) }))
+  const parents = plan.people.filter((p) => p.protein !== plan.proteinId)
+  const warn = parents.length ? `${t.noPork} ${nm(parents[0].protein)}` : undefined
   const lunch = plan.meals.find((m) => m.meal === 'lunch')?.dishIds ?? []
   const dinner = plan.meals.find((m) => m.meal === 'dinner')?.dishIds ?? []
 
   return [
     {
-      key: 'breakfast', time: '🌅 7:30', title: t.breakfast, serveAt: t.serveByBreakfast,
+      key: 'breakfast', time: '🌅 9:30', title: t.breakfast, serveAt: t.serveByBreakfast,
       steps: [
-        { key: 'make_pudding', label: t.makePudding, detail: t.puddingDetail },
+        { key: 'make_pudding', label: t.makePudding, detail: t.puddingHint, recipe: pudding },
         { key: 'make_juice', label: `${t.makeJuice}: ${nm(plan.juiceId)}` },
         { key: 'set_breakfast', label: t.setBreakfast },
         { key: 'serve_breakfast', label: t.serveBreakfast },
@@ -70,14 +89,14 @@ export function stepsForDay(plan: DayPlan, names: NameMap, lang: Lang = 'en'): S
     {
       key: 'lunch_prep', time: '🍳 by 11:45', title: t.lunchPrep,
       steps: [
-        { key: 'buy_lunch', label: t.buyLunch, detail: dishList(lunch) },
-        { key: 'cook_lunch_meat', label: `${t.cookLunchMeat} — ${nm(plan.proteinId)} (${t.perPerson})`, detail: weigh },
+        { key: 'buy_lunch', label: t.buyLunch, dishes: dishItems(lunch) },
+        { key: 'cook_lunch_meat', label: `${t.cookLunchMeat} — ${nm(plan.proteinId)} (${t.perPerson})`, weigh, warn },
       ],
     },
     {
       key: 'lunch', time: '🍽️ 12:00', title: t.lunch, serveAt: t.serveAtLunch,
       steps: [
-        { key: 'plate_lunch', label: t.plate },
+        { key: 'plate_lunch', label: t.plate, dishes: dishItems(lunch) },
         { key: 'set_lunch', label: t.setTable },
         { key: 'serve_lunch', label: t.serveLunch },
         { key: 'dessert_lunch', label: `${t.dessert}: ${nm(plan.dessertId)}` },
@@ -86,14 +105,14 @@ export function stepsForDay(plan: DayPlan, names: NameMap, lang: Lang = 'en'): S
     {
       key: 'dinner_prep', time: '🍳 by 18:00', title: t.dinnerPrep,
       steps: [
-        { key: 'buy_dinner', label: t.buyDinner, detail: dishList(dinner) },
-        { key: 'cook_dinner_meat', label: t.cookDinnerMeat, detail: weigh },
+        { key: 'buy_dinner', label: t.buyDinner, dishes: dishItems(dinner) },
+        { key: 'cook_dinner_meat', label: t.cookDinnerMeat, weigh, warn },
       ],
     },
     {
       key: 'dinner', time: '🌙 18:30', title: t.dinner, serveAt: t.serveAtDinner,
       steps: [
-        { key: 'plate_dinner', label: t.plateDinner },
+        { key: 'plate_dinner', label: t.plateDinner, dishes: dishItems(dinner) },
         { key: 'set_dinner', label: t.setDinner },
         { key: 'serve_dinner', label: t.serveDinner },
       ],

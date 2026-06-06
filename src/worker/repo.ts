@@ -1,5 +1,6 @@
 import type { Env } from './env'
 import type { Dish, ProteinCategory } from '../brain/types'
+import type { NameMap, ServeStyle, PuddingRecipe } from '../brain/steps'
 import { DEFAULT_CONFIG } from '../brain/config'
 import { computeDayPlan, type DayPlan, type DishLib, type PlanLists, type PlanOptions } from '../brain/plan'
 
@@ -156,16 +157,34 @@ export async function listReceipts(
   return { total: items.reduce((s, x) => s + x.amountVnd, 0), items }
 }
 
-export async function loadNames(db: D1Database): Promise<Record<string, { en: string; vi: string }>> {
-  const dishes = await db.prepare('SELECT id, name_en, name_vi FROM dishes').all<{ id: string; name_en: string; name_vi: string }>()
+export async function loadNames(db: D1Database): Promise<NameMap> {
+  const dishes = await db
+    .prepare('SELECT id, name_en, name_vi, serve_style, needs_assembly FROM dishes')
+    .all<{ id: string; name_en: string; name_vi: string; serve_style: ServeStyle; needs_assembly: number }>()
   const juices = await db.prepare('SELECT id, name_en, name_vi FROM juices').all<{ id: string; name_en: string; name_vi: string }>()
-  const names: Record<string, { en: string; vi: string }> = {}
-  for (const r of dishes.results) names[r.id] = { en: r.name_en, vi: r.name_vi }
+  const names: NameMap = {}
+  for (const r of dishes.results) {
+    names[r.id] = { en: r.name_en, vi: r.name_vi, serveStyle: r.serve_style, needsAssembly: !!r.needs_assembly }
+  }
   for (const r of juices.results) names[r.id] = { en: r.name_en, vi: r.name_vi }
   for (const cat of Object.keys(DEFAULT_CONFIG.proteins) as (keyof typeof DEFAULT_CONFIG.proteins)[]) {
     names[cat] = { en: DEFAULT_CONFIG.proteins[cat].nameEn, vi: DEFAULT_CONFIG.proteins[cat].nameVi }
   }
   return names
+}
+
+/** The Nutty Pudding recipe (ingredients) + per-person NAKPRO scoops, for the helper card. */
+export async function loadPudding(db: D1Database): Promise<PuddingRecipe> {
+  const row = await db.prepare("SELECT ingredients FROM recipes WHERE key = 'nutty_pudding'").first<{ ingredients: string }>()
+  let ingredients: { label: string; qty: string }[] = []
+  try {
+    const parsed = JSON.parse(row?.ingredients || '[]') as { en: string; qty: string }[]
+    ingredients = parsed.map((i) => ({ label: i.en, qty: i.qty }))
+  } catch {
+    /* keep empty */
+  }
+  const scoops = DEFAULT_CONFIG.people.map((p) => ({ name: p.name, scoops: p.puddingScoops }))
+  return { ingredients, scoops }
 }
 
 export async function getCompletedSteps(
