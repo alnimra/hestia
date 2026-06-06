@@ -13,12 +13,12 @@ const plan: DayPlan = {
   people: [
     {
       personId: 'milan', name: 'Milan', targetG: 140, protein: 'pork',
-      meatGramsPerMeal: 70, meatGramsPerDay: 140, puddingG: 36, dishesG: 40,
+      plannedTargetG: 150, meatGramsPerMeal: 70, meatGramsPerDay: 140, puddingG: 36, dishesG: 40,
       servedMeatProteinG: 36.638, totalProteinG: 112.638, targetGapG: 27.362, wouldExceed: false,
     },
     {
       personId: 'mom', name: 'Mẹ', targetG: 70, protein: 'chicken',
-      meatGramsPerMeal: 0, meatGramsPerDay: 0, puddingG: 22, dishesG: 40,
+      plannedTargetG: 65, meatGramsPerMeal: 0, meatGramsPerDay: 0, puddingG: 22, dishesG: 40,
       servedMeatProteinG: 0, totalProteinG: 62, targetGapG: 8, wouldExceed: true,
     },
   ],

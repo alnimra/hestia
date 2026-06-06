@@ -67,10 +67,10 @@ export const DEFAULT_CONFIG: Config = {
   },
 
   people: [
-    { id: 'milan', name: 'Milan', targetG: 140, eatsPork: true, eatsBeef: true, puddingScoops: 1.0, safetyMarginG: 5 },
-    { id: 'brother', name: 'Em trai', targetG: 150, eatsPork: true, eatsBeef: true, puddingScoops: 1.5, safetyMarginG: 5 },
-    { id: 'dad', name: 'Bố', targetG: 110, eatsPork: false, eatsBeef: false, puddingScoops: 1.0, safetyMarginG: 5 },
-    { id: 'mom', name: 'Mẹ', targetG: 70, eatsPork: false, eatsBeef: false, puddingScoops: 0.5, safetyMarginG: 5 },
+    { id: 'milan', name: 'Milan', targetG: 140, eatsPork: true, eatsBeef: true, puddingScoops: 1.0, proteinBufferG: 10 },
+    { id: 'brother', name: 'Em trai', targetG: 150, eatsPork: true, eatsBeef: true, puddingScoops: 1.5, proteinBufferG: 10 },
+    { id: 'dad', name: 'Bố', targetG: 110, eatsPork: false, eatsBeef: false, puddingScoops: 1.0, proteinBufferG: -5 },
+    { id: 'mom', name: 'Mẹ', targetG: 70, eatsPork: false, eatsBeef: false, puddingScoops: 0.5, proteinBufferG: -5 },
   ],
 
   puddingBaseProteinG: 8,

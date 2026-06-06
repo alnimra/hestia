@@ -42,6 +42,7 @@ export interface PersonDay {
   personId: string
   name: string
   targetG: number
+  plannedTargetG: number
   protein: ProteinCategory
   meatGramsPerMeal: number
   meatGramsPerDay: number
@@ -94,7 +95,7 @@ export function computeDayPlan(
   const attendance = opts.attendance ?? {}
   const eating = cfg.people.filter((p) => attendance[p.id] !== false)
   const dishProteinCapG = eating.length
-    ? Math.min(...eating.map((person) => Math.max(0, person.targetG - puddingProteinG(cfg, person))))
+    ? Math.min(...eating.map((person) => Math.max(0, person.targetG + person.proteinBufferG - puddingProteinG(cfg, person))))
     : Infinity
 
   const { mains, sides, carbs } = lists.dishes
@@ -145,6 +146,7 @@ export function computeDayPlan(
       personId: person.id,
       name: person.name,
       targetG: person.targetG,
+      plannedTargetG: b.plannedTargetG,
       protein,
       meatGramsPerMeal: b.meatGramsPerMeal,
       meatGramsPerDay: b.meatGramsPerDay,

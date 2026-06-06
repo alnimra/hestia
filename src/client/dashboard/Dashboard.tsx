@@ -71,7 +71,10 @@ export function Dashboard() {
             <div className="d-person" key={p.personId}>
               <span className="dp-name">{p.name}</span>
               <span className="dp-meat">{nm(p.protein)} · {p.meatGramsPerMeal} cooked g/meal</span>
-              <span className="dp-total">{grams(p.totalProteinG)} / {p.targetG}g</span>
+              <span className="dp-total">
+                {grams(p.totalProteinG)} / {p.targetG}g
+                {p.plannedTargetG !== p.targetG && <small>{p.plannedTargetG > p.targetG ? '+' : ''}{p.plannedTargetG - p.targetG}g plan</small>}
+              </span>
               {p.wouldExceed && <span className="dp-flag">dishes cover it</span>}
             </div>
           ))}

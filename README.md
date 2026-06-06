@@ -2,7 +2,7 @@
 
 A bilingual (English owner / Vietnamese housekeeper) household **meal-routine PWA**, running
 fully Cloudflare-native. The housekeeper runs a timed daily checklist; the owner watches live
-and every person's protein stays inside target with a small safety margin.
+and every person's protein follows their configured buffer (sons aim +10g; parents stay conservative).
 
 Goal + plan: **https://github.com/alnimra/hestia/issues/1**
 

@@ -50,17 +50,19 @@ const day = (n: number): string => {
 }
 
 describe('seeded meal protein totals', () => {
-  it('keeps the real seeded rotation inside every default active person target', () => {
+  it('keeps the real seeded rotation inside every default active person planned target', () => {
     const lists = loadSeedLists()
-    const lowestDishCap = Math.min(...DEFAULT_CONFIG.people.map((p) => p.targetG - puddingProteinG(DEFAULT_CONFIG, p)))
+    const lowestDishCap = Math.min(
+      ...DEFAULT_CONFIG.people.map((p) => p.targetG + p.proteinBufferG - puddingProteinG(DEFAULT_CONFIG, p)),
+    )
 
     expect(lists.dishes.mains.length).toBeGreaterThan(10)
     for (let i = 0; i < 56; i++) {
       const p = computeDayPlan(DEFAULT_CONFIG, day(i), lists)
       expect(p.dishesProteinPerDayG).toBeLessThanOrEqual(lowestDishCap)
       for (const person of p.people) {
-        expect(person.totalProteinG).toBeLessThanOrEqual(person.targetG)
-        expect(person.targetGapG).toBeGreaterThanOrEqual(0)
+        expect(person.totalProteinG).toBeLessThanOrEqual(person.plannedTargetG)
+        if (person.plannedTargetG <= person.targetG) expect(person.targetGapG).toBeGreaterThanOrEqual(0)
       }
     }
   })

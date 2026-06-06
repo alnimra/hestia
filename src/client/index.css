@@ -80,7 +80,8 @@ body {
 .d-person { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid #f4ede5; font-size: 13px; }
 .dp-name { font-weight: 700; width: 70px; }
 .dp-meat { color: var(--muted); }
-.dp-total { margin-left: auto; color: var(--ink); font-weight: 800; white-space: nowrap; }
+.dp-total { margin-left: auto; color: var(--ink); font-weight: 800; white-space: nowrap; display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2; }
+.dp-total small { color: var(--muted); font-size: 10px; font-weight: 800; }
 .dp-flag { font-size: 10.5px; font-weight: 700; color: var(--green); background: var(--green-soft); border-radius: 6px; padding: 2px 7px; }
 .d-row { display: flex; align-items: center; gap: 10px; margin: 8px 0; font-size: 13.5px; font-weight: 600; }
 .d-row > span { width: 64px; }

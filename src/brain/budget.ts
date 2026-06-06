@@ -3,6 +3,7 @@ import type { Config, Person, ProteinCategory } from './types'
 export interface PersonBudget {
   personId: string
   targetG: number
+  plannedTargetG: number
   puddingG: number
   dishesG: number
   protein: ProteinCategory
@@ -20,15 +21,16 @@ export function puddingProteinG(cfg: Config, person: Person): number {
 }
 
 /**
- * The 3-source protein budget: target = pudding + dishes + meat top-up, sized so
- * the total lands ON target and never over.
- *   meat = max(0, target - pudding - dishes - safetyMargin)
+ * The 3-source protein budget: planned target = nominal target + per-person
+ * buffer. Sons can aim over because dish estimates may undercount; parents can
+ * keep a conservative under-target buffer.
+ *   meat = max(0, plannedTarget - pudding - dishes)
  *
  * `protein` is the cooked cut this person actually gets (the parent-safe swap is
  * resolved by the caller). Cooked grams are computed for the whole day and floored;
  * the served day is two EQUAL meals via floor(perDay/2), so the served meat can
- * never exceed the daily budget. If pudding + dishes already meet target, meat is
- * 0 and `wouldExceed` is set (we clamp, we do not reduce dishes).
+ * never exceed the daily budget. If pudding + dishes already meet the planned
+ * target, meat is 0 and `wouldExceed` is set (we clamp, we do not reduce dishes).
  */
 export function computeBudget(
   cfg: Config,
@@ -38,8 +40,9 @@ export function computeBudget(
 ): PersonBudget {
   const puddingG = puddingProteinG(cfg, person)
   const dishesG = Math.max(0, dishesProteinPerDayG)
-  const meatProteinG = Math.max(0, person.targetG - puddingG - dishesG - person.safetyMarginG)
-  const wouldExceed = puddingG + dishesG >= person.targetG
+  const plannedTargetG = person.targetG + person.proteinBufferG
+  const meatProteinG = Math.max(0, plannedTargetG - puddingG - dishesG)
+  const wouldExceed = puddingG + dishesG >= plannedTargetG
 
   const density = cfg.proteins[protein].proteinPer100gCooked
   const meatGramsPerDay = Math.floor((meatProteinG * 100) / density)
@@ -51,6 +54,7 @@ export function computeBudget(
   return {
     personId: person.id,
     targetG: person.targetG,
+    plannedTargetG,
     puddingG,
     dishesG,
     protein,

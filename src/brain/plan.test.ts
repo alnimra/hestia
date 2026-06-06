@@ -118,21 +118,37 @@ describe('computeDayPlan', () => {
     }
   })
 
-  it('exposes deterministic protein totals that stay within each active person target', () => {
+  it('exposes deterministic protein totals that stay within each active person planned target', () => {
     for (let i = 0; i < 12; i++) {
       const p = computeDayPlan(DEFAULT_CONFIG, day(i), lists)
       for (const person of p.people) {
         expect(person.totalProteinG).toBeCloseTo(person.puddingG + person.dishesG + person.servedMeatProteinG, 6)
-        expect(person.totalProteinG).toBeLessThanOrEqual(person.targetG)
+        expect(person.totalProteinG).toBeLessThanOrEqual(person.plannedTargetG)
         expect(person.targetGapG).toBeCloseTo(person.targetG - person.totalProteinG, 6)
       }
     }
+  })
+
+  it('intentionally plans Milan and Em trai over nominal target to offset rough food estimates', () => {
+    const p = computeDayPlan(DEFAULT_CONFIG, day(0), lists)
+    const milan = p.people.find((x) => x.personId === 'milan')!
+    const brother = p.people.find((x) => x.personId === 'brother')!
+    const mom = p.people.find((x) => x.personId === 'mom')!
+
+    expect(milan.plannedTargetG).toBe(150)
+    expect(milan.totalProteinG).toBeGreaterThan(milan.targetG)
+    expect(milan.totalProteinG).toBeLessThanOrEqual(milan.plannedTargetG)
+    expect(brother.plannedTargetG).toBe(160)
+    expect(brother.totalProteinG).toBeGreaterThan(brother.targetG)
+    expect(brother.totalProteinG).toBeLessThanOrEqual(brother.plannedTargetG)
+    expect(mom.plannedTargetG).toBe(65)
+    expect(mom.totalProteinG).toBeLessThanOrEqual(mom.targetG)
   })
 
   it('reroutes to a lower-protein dish pair before the lowest active target would be exceeded', () => {
     const p = computeDayPlan(DEFAULT_CONFIG, day(0), tightProteinLists)
     expect(p.meals.flatMap((m) => m.dishIds)).toEqual(['low_a', 'low_b'])
     expect(p.dishesProteinPerDayG).toBe(26)
-    for (const person of p.people) expect(person.totalProteinG).toBeLessThanOrEqual(person.targetG)
+    for (const person of p.people) expect(person.totalProteinG).toBeLessThanOrEqual(person.plannedTargetG)
   })
 })

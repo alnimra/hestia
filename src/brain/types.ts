@@ -29,8 +29,8 @@ export interface Person {
   eatsBeef: boolean
   /** NAKPRO pea-protein scoops in the morning pudding (the breakfast lever). */
   puddingScoops: number
-  /** bias the meat top-up DOWN so we never go over while estimates are rough. */
-  safetyMarginG: number
+  /** planned grams above/below the nominal target. Positive = prefer over. */
+  proteinBufferG: number
 }
 
 export interface Config {

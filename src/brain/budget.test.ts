@@ -41,16 +41,23 @@ describe('source-backed cooked protein densities', () => {
   })
 })
 
-describe('3-source budget clamps the meat top-up', () => {
-  it('the meat top-up never pushes over target; over-target dishes are flagged, not reduced here', () => {
+describe('3-source budget follows each person protein buffer', () => {
+  it('the meat top-up never pushes over the planned target; over-target dishes are flagged, not reduced here', () => {
     for (const person of DEFAULT_CONFIG.people) {
       for (const dishes of [0, 5, 12, 20, 50, 200]) {
         const b = computeBudget(DEFAULT_CONFIG, person, 'pork', dishes)
         expect(b.meatProteinG).toBeGreaterThanOrEqual(0)
         if (b.wouldExceed) expect(b.meatProteinG).toBe(0)
-        else expect(b.puddingG + b.dishesG + b.meatProteinG).toBeLessThanOrEqual(person.targetG + 0.0001)
+        else expect(b.puddingG + b.dishesG + b.meatProteinG).toBeLessThanOrEqual(b.plannedTargetG + 0.0001)
       }
     }
+  })
+
+  it('plans Milan and Em trai 10g above nominal target, while parents stay 5g under', () => {
+    expect(computeBudget(DEFAULT_CONFIG, milan, 'chicken', 36).plannedTargetG).toBe(150)
+    expect(computeBudget(DEFAULT_CONFIG, DEFAULT_CONFIG.people.find((p) => p.id === 'brother')!, 'chicken', 36).plannedTargetG).toBe(160)
+    expect(computeBudget(DEFAULT_CONFIG, DEFAULT_CONFIG.people.find((p) => p.id === 'dad')!, 'chicken', 36).plannedTargetG).toBe(105)
+    expect(computeBudget(DEFAULT_CONFIG, mom, 'chicken', 36).plannedTargetG).toBe(65)
   })
 
   it('cooked grams (whole day and the two equal meals) never represent more than the budget', () => {
@@ -74,7 +81,8 @@ describe('3-source budget clamps the meat top-up', () => {
   })
 
   it('sizes the meat from the given protein density', () => {
-    // mom target 70, pudding 22, dishes 12, safety 5 -> meat 31 -> chicken 31.02g/100g
+    // mom target 70, buffer -5 -> planned target 65; pudding 22, dishes 12 -> meat 31.
+    // chicken 31.02g/100g
     // -> perDay floor(31*100/31.02)=99 -> perMeal 49
     const b = computeBudget(DEFAULT_CONFIG, mom, 'chicken', 12)
     expect(b.protein).toBe('chicken')

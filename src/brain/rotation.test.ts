@@ -77,7 +77,7 @@ describe('redMeatOrdinal oracle + asymmetric eaters', () => {
   })
 
   it('an asymmetric eater (pork yes, beef no) is swapped only on beef days', () => {
-    const p = { id: 'x', name: 'X', targetG: 100, eatsPork: true, eatsBeef: false, puddingScoops: 0, safetyMarginG: 0 }
+    const p = { id: 'x', name: 'X', targetG: 100, eatsPork: true, eatsBeef: false, puddingScoops: 0, proteinBufferG: 0 }
     expect(proteinForPerson(DEFAULT_CONFIG, p, day(2))).toBe('pork') // pork day: he eats pork
     expect(proteinForPerson(DEFAULT_CONFIG, p, day(3))).not.toBe('beef') // beef day: swapped off beef
   })
