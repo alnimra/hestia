@@ -25,8 +25,8 @@
   ],
 
   // Pre-warm the day's plan at 00:00 Asia/Ho_Chi_Minh (= 17:00 UTC, fixed; no DST).
-  "triggers": { "crons": ["0 17 * * *"] }
+  "triggers": { "crons": ["0 17 * * *"] },
 
-  // Added in later stages:
-  //  S9.1  custom domain hestia.afima.io + Cloudflare Access (owner m@ray.vin)
+  // Live at the custom domain (afima.io zone in the m@ray.vin account).
+  "routes": [{ "pattern": "hestia.afima.io", "custom_domain": true }]
 }
