@@ -22,9 +22,11 @@
   ],
   "kv_namespaces": [
     { "binding": "KV", "id": "8ca730b2a74640bc82554d59ffb8b71a" }
-  ]
+  ],
+
+  // Pre-warm the day's plan at 00:00 Asia/Ho_Chi_Minh (= 17:00 UTC, fixed; no DST).
+  "triggers": { "crons": ["0 17 * * *"] }
 
   // Added in later stages:
-  //  S5.1  "triggers": { "crons": ["0 17 * * *"] }   // 00:00 Asia/Ho_Chi_Minh
   //  S9.1  custom domain hestia.afima.io + Cloudflare Access (owner m@ray.vin)
 }
