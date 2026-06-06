@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import type { Env } from './env'
 import { hcmcDateString } from '../brain/date'
-import { getOrCreatePlan } from './repo'
+import { getOrCreatePlan, loadNames, getCompletedSteps, recordStep, undoStep } from './repo'
 
 const app = new Hono<{ Bindings: Env }>()
 
@@ -19,11 +19,35 @@ app.get('/api/health', (c) =>
  */
 app.get('/api/today', async (c) => {
   const date = c.req.query('date') ?? hcmcDateString(new Date())
-  const plan = await getOrCreatePlan(c.env, date)
-  return c.json(plan)
+  const [plan, names] = await Promise.all([getOrCreatePlan(c.env, date), loadNames(c.env.DB)])
+  return c.json({ ...plan, names })
 })
 
-// Real /api routes arrive in later stages; unknown ones return JSON 404, not HTML.
+// Helper check-offs — open (no auth, per owner decision). Server-stamped + idempotent.
+app.get('/api/tasks', async (c) => {
+  const date = c.req.query('date') ?? hcmcDateString(new Date())
+  return c.json({ date, completed: await getCompletedSteps(c.env.DB, date) })
+})
+
+app.post('/api/tasks', async (c) => {
+  const body = await c.req.json<{ date?: string; stepKey?: string; clientEventId?: string }>()
+  const date = body.date ?? hcmcDateString(new Date())
+  if (!body.stepKey || !body.clientEventId) {
+    return c.json({ error: 'stepKey and clientEventId required' }, 400)
+  }
+  const completedAt = await recordStep(c.env.DB, date, body.stepKey, body.clientEventId)
+  return c.json({ stepKey: body.stepKey, completedAt })
+})
+
+app.post('/api/tasks/undo', async (c) => {
+  const body = await c.req.json<{ date?: string; stepKey?: string }>()
+  const date = body.date ?? hcmcDateString(new Date())
+  if (!body.stepKey) return c.json({ error: 'stepKey required' }, 400)
+  await undoStep(c.env.DB, date, body.stepKey)
+  return c.json({ ok: true })
+})
+
+// Unknown /api routes return JSON 404, not the SPA.
 app.all('/api/*', (c) => c.json({ error: 'not_found' }, 404))
 
 // Everything else is a client route -> static assets / SPA fallback.
