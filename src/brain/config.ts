@@ -27,5 +27,4 @@ export const DEFAULT_CONFIG: Config = {
 
   puddingBaseProteinG: 8,
   nakproScoopProteinG: 28, // NAKPRO Pea Protein Isolate, ~28g / 36g scoop (unflavoured)
-  mealSplit: 0.5,
 }

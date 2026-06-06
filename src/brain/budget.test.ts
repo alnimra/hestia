@@ -35,12 +35,17 @@ describe('3-source budget never goes over', () => {
     }
   })
 
-  it('floored cooked grams never represent more protein than the per-meal allowance', () => {
-    const b = computeBudget(DEFAULT_CONFIG, milan, PORK_DAY, 28)
-    const density = DEFAULT_CONFIG.proteins[b.protein].proteinPer100gCooked
-    const proteinFromGrams = (b.meatGramsPerMeal * density) / 100
-    const allowedPerMeal = b.meatProteinG * DEFAULT_CONFIG.mealSplit
-    expect(proteinFromGrams).toBeLessThanOrEqual(allowedPerMeal + 0.0001)
+  it('cooked grams (whole day and the two equal meals) never represent more protein than the budget', () => {
+    for (const person of DEFAULT_CONFIG.people) {
+      for (const dishes of [0, 10, 28, 60]) {
+        const b = computeBudget(DEFAULT_CONFIG, person, PORK_DAY, dishes)
+        const density = DEFAULT_CONFIG.proteins[b.protein].proteinPer100gCooked
+        // whole-day grams represent <= the daily meat budget
+        expect((b.meatGramsPerDay * density) / 100).toBeLessThanOrEqual(b.meatProteinG + 0.0001)
+        // two EQUAL meals never exceed the daily grams (split-independent)
+        expect(2 * b.meatGramsPerMeal).toBeLessThanOrEqual(b.meatGramsPerDay)
+      }
+    }
   })
 
   it('when dishes already cover the target, meat is 0 and wouldExceed is flagged', () => {

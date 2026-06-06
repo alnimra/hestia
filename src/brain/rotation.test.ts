@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import type { Config } from './types'
 import { DEFAULT_CONFIG } from './config'
-import { mainProteinFor, parentSafeProteinFor, proteinForPerson } from './rotation'
+import { mainProteinFor, parentSafeProteinFor, proteinForPerson, redMeatOrdinal } from './rotation'
 
 // epoch 2026-01-01 = day 0; small day-index -> date string helper.
 const day = (n: number) => `2026-01-${String(1 + n).padStart(2, '0')}`
@@ -60,5 +60,25 @@ describe('redMeatOrdinal is derived from the live rotation array', () => {
     const got = porkAndBeefDays.map((d) => parentSafeProteinFor(varied, day(d)))
     // Not all the same across the six red-meat days.
     expect(new Set(got).size).toBeGreaterThan(1)
+  })
+})
+
+describe('redMeatOrdinal oracle + asymmetric eaters', () => {
+  it('matches an independent brute-force red-meat count over a range', () => {
+    const isRed = (c: string) => c === 'pork' || c === 'beef'
+    let naive = -1
+    for (let d = 0; d <= 27; d++) {
+      const main = DEFAULT_CONFIG.mainRotation[d % DEFAULT_CONFIG.mainRotation.length]
+      if (isRed(main)) {
+        naive++
+        expect(redMeatOrdinal(DEFAULT_CONFIG, day(d))).toBe(naive)
+      }
+    }
+  })
+
+  it('an asymmetric eater (pork yes, beef no) is swapped only on beef days', () => {
+    const p = { id: 'x', name: 'X', targetG: 100, eatsPork: true, eatsBeef: false, puddingScoops: 0, safetyMarginG: 0 }
+    expect(proteinForPerson(DEFAULT_CONFIG, p, day(2))).toBe('pork') // pork day: he eats pork
+    expect(proteinForPerson(DEFAULT_CONFIG, p, day(3))).not.toBe('beef') // beef day: swapped off beef
   })
 })

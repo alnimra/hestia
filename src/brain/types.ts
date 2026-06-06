@@ -38,6 +38,4 @@ export interface Config {
   puddingBaseProteinG: number
   /** protein per NAKPRO scoop (~28g for the unflavoured 36g scoop). */
   nakproScoopProteinG: number
-  /** fraction of the daily meat top-up served at each of the two main meals. */
-  mealSplit: number
 }
