@@ -39,3 +39,18 @@ export interface Config {
   /** protein per NAKPRO scoop (~28g for the unflavoured 36g scoop). */
   nakproScoopProteinG: number
 }
+
+export type DishType = 'main' | 'side' | 'carb' | 'dessert'
+export type ServeStyle = 'assemble' | 'reheat' | 'plate_garnish' | 'cook_fresh' | 'serve_chilled'
+
+/** A Vietnamese dish / dessert from the seeded library (D1 `dishes` table). */
+export interface Dish {
+  id: string
+  nameEn: string
+  nameVi: string
+  type: DishType
+  proteinPerServingG: number
+  parentSafe: boolean
+  serveStyle: ServeStyle
+  needsAssembly: boolean
+}

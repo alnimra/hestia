@@ -1,35 +1,43 @@
 import { Hono } from 'hono'
-
-export type Env = {
-  DB: D1Database
-  KV: KVNamespace
-  ASSETS: Fetcher
-}
+import type { Env } from './env'
+import { hcmcDateString } from '../brain/date'
+import { getOrCreatePlan } from './repo'
 
 const app = new Hono<{ Bindings: Env }>()
 
 /**
- * Health check. MUST return JSON, never the SPA index.html. This is the
- * regression guard for the Workers-Assets "SPA fallback swallows /api" footgun
- * (eng review P2-2): if asset routing is misconfigured, this route would return
- * HTML and the test in test/health.test.ts fails.
+ * Health check. MUST return JSON, never the SPA index.html (guards the
+ * Workers-Assets "SPA fallback swallows /api" footgun; see test/health.test.ts).
  */
 app.get('/api/health', (c) =>
-  c.json({
-    status: 'ok',
-    service: 'hestia',
-    stage: 's0.1-scaffold',
-    ts: new Date().toISOString(),
-  }),
+  c.json({ status: 'ok', service: 'hestia', stage: 's5.1-plan', ts: new Date().toISOString() }),
 )
 
-// Real /api routes (auth, plan, tasks, receipts, ...) arrive in later stages.
-// Until then, unknown API paths return JSON 404 (not the SPA).
+/**
+ * Today's plan (or ?date=YYYY-MM-DD). "Today" is the Asia/Ho_Chi_Minh civil date,
+ * never the UTC/server date. Public read for now; write endpoints get auth in S1.
+ */
+app.get('/api/today', async (c) => {
+  const date = c.req.query('date') ?? hcmcDateString(new Date())
+  const plan = await getOrCreatePlan(c.env, date)
+  return c.json(plan)
+})
+
+// Real /api routes arrive in later stages; unknown ones return JSON 404, not HTML.
 app.all('/api/*', (c) => c.json({ error: 'not_found' }, 404))
 
-// Everything else is a client route: hand it to the static assets / SPA fallback.
-// (Static files are normally served before the Worker is even invoked; this
-// catch-all covers SPA deep links like /today and /dashboard.)
+// Everything else is a client route -> static assets / SPA fallback.
 app.all('*', (c) => c.env.ASSETS.fetch(c.req.raw))
 
-export default app
+export { app } // for tests
+
+export default {
+  fetch(req: Request, env: Env, ctx: ExecutionContext): Response | Promise<Response> {
+    return app.fetch(req, env, ctx)
+  },
+  // Cron 0 17 * * * UTC = 00:00 Asia/Ho_Chi_Minh: pre-warm the day's plan. Calls
+  // the SAME getOrCreatePlan as the lazy read path (one function, two callers).
+  async scheduled(_event: ScheduledController, env: Env, _ctx: ExecutionContext): Promise<void> {
+    await getOrCreatePlan(env, hcmcDateString(new Date()))
+  },
+}
