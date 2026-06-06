@@ -34,6 +34,23 @@ describe('computeDayPlan', () => {
     expect(computeDayPlan(DEFAULT_CONFIG, day(2), lists)).toEqual(p) // pure / stable
   })
 
+  it('parents differ from the main ONLY on pork/beef days (no spurious swap)', () => {
+    // chicken day: parents eat chicken, NOT the swap-rotation value -> field == main
+    const chicken = computeDayPlan(DEFAULT_CONFIG, day(0), lists)
+    expect(chicken.proteinId).toBe('chicken')
+    expect(chicken.parentProteinId).toBe('chicken')
+    expect(chicken.people.find((x) => x.personId === 'mom')!.protein).toBe('chicken')
+    // fish day: same — parents eat fish
+    const fish = computeDayPlan(DEFAULT_CONFIG, day(1), lists)
+    expect(fish.proteinId).toBe('fish')
+    expect(fish.parentProteinId).toBe('fish')
+    // beef day: parents swap off red meat
+    const beef = computeDayPlan(DEFAULT_CONFIG, day(3), lists)
+    expect(beef.proteinId).toBe('beef')
+    expect(beef.parentProteinId).not.toBe('beef')
+    expect(beef.people.find((x) => x.personId === 'mom')!.protein).toBe(beef.parentProteinId)
+  })
+
   it('rotates juice and dessert by day index', () => {
     expect(computeDayPlan(DEFAULT_CONFIG, day(0), lists).juiceId).toBe('pennywort')
     expect(computeDayPlan(DEFAULT_CONFIG, day(1), lists).juiceId).toBe('brahmi')

@@ -78,7 +78,12 @@ export function computeDayPlan(
   const ov = opts.override ?? {}
 
   const proteinId = ov.proteinId ?? mainProteinFor(cfg, dateISO)
-  const parentProteinId = ov.parentProteinId ?? parentSafeProteinFor(cfg, dateISO)
+  // The safe protein parents get *when the main is red meat* (the chicken/fish swap rotation).
+  const parentSwap = ov.parentProteinId ?? parentSafeProteinFor(cfg, dateISO)
+  // What parents actually eat: the main, UNLESS it is pork/beef -> the swap. On
+  // chicken/fish days parents eat exactly what everyone else does (no spurious diff).
+  const isRedMain = proteinId === 'pork' || proteinId === 'beef'
+  const parentProteinId = isRedMain ? parentSwap : proteinId
   const juiceId = ov.juiceId !== undefined ? ov.juiceId : (pick(lists.juices, d) ?? null)
   const dessertId = ov.dessertId !== undefined ? ov.dessertId : (pick(lists.desserts, d) ?? null)
 
