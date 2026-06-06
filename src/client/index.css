@@ -100,3 +100,44 @@ body {
 .d-bill { margin-bottom: 8px; }
 .d-bill b { font-size: 20px; font-weight: 900; }
 .d-bill span { color: var(--muted); font-size: 13px; }
+
+/* day navigation */
+.t-nav { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 10px; }
+.t-nav .nav { width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--line2); background: #fff; font-size: 20px; font-weight: 800; color: var(--ember-deep); cursor: pointer; line-height: 1; }
+.t-nav .t-date { background: var(--ember-soft); }
+
+/* step rows — now expandable */
+.step { padding: 0; border-top: 1px solid #f4ede5; }
+.step:first-of-type { border-top: 0; }
+.s-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 13px; }
+.s-body { flex: 1; display: flex; align-items: center; gap: 8px; background: none; border: 0; padding: 0; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.s-label { font-size: 14.5px; font-weight: 600; }
+.s-done .s-label { color: var(--muted); font-weight: 500; }
+.chev { margin-left: auto; color: var(--muted); font-weight: 800; font-size: 18px; transition: transform .15s; }
+.chev.open { transform: rotate(90deg); }
+
+/* expanded detail */
+.detail { padding: 2px 14px 14px 55px; }
+.detail .warn { background: #fff4f0; border: 1px solid #f3cdbe; color: var(--ember-deep); border-radius: 9px; padding: 8px 11px; font-size: 12.5px; font-weight: 700; margin-bottom: 9px; }
+.weigh { width: 100%; border-collapse: collapse; }
+.weigh td { padding: 7px 4px; border-bottom: 1px solid #f4ede5; font-size: 13.5px; }
+.weigh tr:last-child td { border-bottom: 0; }
+.w-name { font-weight: 700; }
+.w-g { text-align: right; font-weight: 800; }
+.w-g b { font-size: 16px; color: var(--ember-deep); }
+.chip-p { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; background: var(--ember-soft); color: var(--ember-deep); }
+.dishes { display: flex; flex-direction: column; gap: 7px; }
+.dish { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13.5px; }
+.d-name { font-weight: 600; }
+.ss { font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 6px; border: 1px solid transparent; }
+.ss-assemble { background: #fdebd2; color: #9a5b12; border-color: #f0d3a6; }
+.ss-reheat { background: #fde3dc; color: #a23b22; border-color: #f3cdbe; }
+.ss-plate_garnish { background: #e5eef6; color: #1d4e79; border-color: #cfe0ef; }
+.ss-cook_fresh { background: var(--green-soft); color: var(--green); border-color: #cfe6da; }
+.ss-serve_chilled { background: #f4e9f3; color: #7a3b6e; border-color: #e6d3e6; }
+.d-asm { width: 100%; font-size: 11.5px; color: var(--ember-deep); background: #fff4f0; border: 1px solid #f3cdbe; border-radius: 8px; padding: 6px 9px; font-weight: 600; }
+.recipe .r-sub { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 8px 0 4px; }
+.r-ing { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; border-bottom: 1px solid #f4ede5; }
+.r-ing:last-child { border-bottom: 0; }
+.r-qty { font-weight: 800; color: var(--ink); }
+.d-text { font-size: 12.5px; color: var(--muted); }

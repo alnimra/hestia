@@ -3,7 +3,7 @@ import type { Env } from './env'
 import type { ProteinCategory } from '../brain/types'
 import { hcmcDateString } from '../brain/date'
 import {
-  getOrCreatePlan, loadNames, getCompletedSteps, recordStep, undoStep,
+  getOrCreatePlan, loadNames, loadPudding, getCompletedSteps, recordStep, undoStep,
   setOverride, setAttendance, resetDay, addReceipt, listReceipts,
 } from './repo'
 
@@ -23,8 +23,8 @@ app.get('/api/health', (c) =>
  */
 app.get('/api/today', async (c) => {
   const date = c.req.query('date') ?? hcmcDateString(new Date())
-  const [plan, names] = await Promise.all([getOrCreatePlan(c.env, date), loadNames(c.env.DB)])
-  return c.json({ ...plan, names })
+  const [plan, names, pudding] = await Promise.all([getOrCreatePlan(c.env, date), loadNames(c.env.DB), loadPudding(c.env.DB)])
+  return c.json({ ...plan, names, pudding })
 })
 
 // Helper check-offs — open (no auth, per owner decision). Server-stamped + idempotent.
