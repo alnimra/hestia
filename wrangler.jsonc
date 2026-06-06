@@ -1,0 +1,29 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "hestia",
+  "main": "src/worker/index.ts",
+  "compatibility_date": "2026-06-01",
+
+  // One Worker serves the JSON API (/api/*) AND the Vite/React PWA static assets.
+  // Static-asset requests are served directly (free, no Worker invocation); the
+  // Worker runs for /api/* and for SPA routes, which it delegates to env.ASSETS.
+  "assets": {
+    "directory": "./dist/client",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
+  },
+
+  // Data + helper-PIN throttle. IDs are filled after `wrangler d1 create hestia`
+  // and `wrangler kv namespace create hestia-kv` (see README). Placeholders are
+  // fine for local `vite build` / `vitest`, which don't read this file.
+  "d1_databases": [
+    { "binding": "DB", "database_name": "hestia", "database_id": "PLACEHOLDER_run_wrangler_d1_create" }
+  ],
+  "kv_namespaces": [
+    { "binding": "KV", "id": "PLACEHOLDER_run_wrangler_kv_namespace_create" }
+  ]
+
+  // Added in later stages:
+  //  S5.1  "triggers": { "crons": ["0 17 * * *"] }   // 00:00 Asia/Ho_Chi_Minh
+  //  S9.1  custom domain hestia.afima.io + Cloudflare Access (owner m@ray.vin)
+}

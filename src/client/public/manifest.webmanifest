@@ -1,0 +1,11 @@
+{
+  "name": "Hestia",
+  "short_name": "Hestia",
+  "description": "The family meal routine, run by checklist.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FBF7F2",
+  "theme_color": "#C75B39",
+  "icons": []
+}
