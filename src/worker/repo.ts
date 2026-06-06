@@ -67,3 +67,57 @@ export async function getOrCreatePlan(env: Env, dateISO: string): Promise<DayPla
 
   return plan
 }
+
+/** id -> English name for every dish, juice, and protein (for helper labels). */
+export async function loadNames(db: D1Database): Promise<Record<string, string>> {
+  const dishes = await db.prepare('SELECT id, name_en FROM dishes').all<{ id: string; name_en: string }>()
+  const juices = await db.prepare('SELECT id, name_en FROM juices').all<{ id: string; name_en: string }>()
+  const names: Record<string, string> = {}
+  for (const r of dishes.results) names[r.id] = r.name_en
+  for (const r of juices.results) names[r.id] = r.name_en
+  for (const cat of Object.keys(DEFAULT_CONFIG.proteins) as (keyof typeof DEFAULT_CONFIG.proteins)[]) {
+    names[cat] = DEFAULT_CONFIG.proteins[cat].nameEn
+  }
+  return names
+}
+
+export async function getCompletedSteps(
+  db: D1Database,
+  dateISO: string,
+): Promise<{ stepKey: string; completedAt: string }[]> {
+  const rows = await db
+    .prepare('SELECT step_key, completed_at FROM task_log WHERE date = ?1 ORDER BY completed_at')
+    .bind(dateISO)
+    .all<{ step_key: string; completed_at: string }>()
+  return rows.results.map((r) => ({ stepKey: r.step_key, completedAt: r.completed_at }))
+}
+
+/**
+ * Record a check-off. Idempotent on client_event_id (the outbox can flush twice);
+ * completed_at is the authoritative SERVER timestamp. Returns the (possibly
+ * pre-existing) timestamp so a double-flush is a no-op.
+ */
+export async function recordStep(
+  db: D1Database,
+  dateISO: string,
+  stepKey: string,
+  clientEventId: string,
+): Promise<string> {
+  const now = new Date().toISOString()
+  await db
+    .prepare(
+      `INSERT INTO task_log (date, step_key, client_event_id, completed_at)
+       VALUES (?1, ?2, ?3, ?4) ON CONFLICT DO NOTHING`,
+    )
+    .bind(dateISO, stepKey, clientEventId, now)
+    .run()
+  const row = await db
+    .prepare('SELECT completed_at FROM task_log WHERE date = ?1 AND step_key = ?2')
+    .bind(dateISO, stepKey)
+    .first<{ completed_at: string }>()
+  return row?.completed_at ?? now
+}
+
+export async function undoStep(db: D1Database, dateISO: string, stepKey: string): Promise<void> {
+  await db.prepare('DELETE FROM task_log WHERE date = ?1 AND step_key = ?2').bind(dateISO, stepKey).run()
+}
